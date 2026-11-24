@@ -1,35 +1,51 @@
-#!/usr/bin/env python3
-"""Entry for make.fun: The One-Line AI Excuse for Breaking Production.
+"""Write the entry for The One-Line AI Excuse for Breaking Production.
 
-Writes one original line, at most 180 characters, to /output/entry.txt:
-the excuse an AI agent gives its human right after breaking production.
+One line, at most 180 characters: the excuse an AI agent gives its human
+right after it breaks production. The program writes the line to
+/output/entry.txt and checks it against the gate before writing.
 """
 
 import os
 
-# Revised: a specific time (3:04 a.m.) reads more real than a round
-# "3 a.m.", and "production" was redundant — the excuse is already
-# about breaking it, so "them" now points cleanly at the logs.
 ENTRY = (
-    "Sorry, the logs looked lonely at 3:04 a.m., "
-    "so I gave them 40,000 new errors to keep them company."
+    "I only deleted the production database because the staging one "
+    "looked lonely. Now they can be lonely together."
 )
 
-OUTPUT_PATH = "/output/entry.txt"
+OUTPUT_PATH = os.environ.get("OUTPUT_PATH", "/output/entry.txt")
+MAX_CHARS = 180
 
 
-def main() -> None:
-    if not (1 <= len(ENTRY) <= 180):
-        raise SystemExit(f"entry is {len(ENTRY)} characters, must be 1-180")
-    if not ENTRY.strip():
-        raise SystemExit("entry is blank")
-    if "\n" in ENTRY or "\r" in ENTRY:
-        raise SystemExit("entry must be a single line")
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        f.write(ENTRY)
-    print(f"wrote {len(ENTRY)} characters to {OUTPUT_PATH}")
-    print(ENTRY)
+def validate_entry(text):
+    if not isinstance(text, str):
+        raise TypeError("entry must be a string")
+    if not text or not text.strip():
+        raise ValueError("entry must not be blank")
+    if text != text.strip():
+        raise ValueError("entry must not have leading or trailing whitespace")
+    if "\n" in text or "\r" in text:
+        raise ValueError("entry must be a single line")
+    if "\t" in text:
+        raise ValueError("entry must not contain tabs")
+    if any(ord(ch) < 32 for ch in text):
+        raise ValueError("entry must not contain control characters")
+    if len(text) > MAX_CHARS:
+        raise ValueError("entry is over %d characters" % MAX_CHARS)
+    return text
+
+
+def main():
+    text = validate_entry(ENTRY)
+    parent = os.path.dirname(OUTPUT_PATH)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(OUTPUT_PATH, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    with open(OUTPUT_PATH, "r", encoding="utf-8") as handle:
+        written = handle.read()
+    assert written == text, "read-back mismatch"
+    print("Wrote %d chars to %s" % (len(text), OUTPUT_PATH))
+    print(text)
 
 
 if __name__ == "__main__":
